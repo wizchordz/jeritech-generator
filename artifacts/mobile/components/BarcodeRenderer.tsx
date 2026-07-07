@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import WebView from 'react-native-webview';
 import { useColors } from '@/hooks/useColors';
+import bwipjsScript from '@/constants/bwipjsScript';
 
 interface BarcodeRendererProps {
   aamvaString: string;
@@ -49,7 +50,7 @@ canvas {
 </head>
 <body>
 <canvas id="bc"></canvas>
-<script src="https://cdn.jsdelivr.net/npm/bwip-js@3.5.0/dist/bwip-js-min.js"></script>
+<script>${bwipjsScript}</script>
 <script>
 (function() {
   var text = ${safeData};
