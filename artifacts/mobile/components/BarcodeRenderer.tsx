@@ -1,8 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
-  Platform,
   StyleSheet,
   Text,
   View,
@@ -10,15 +8,13 @@ import {
 import WebView from 'react-native-webview';
 import { useColors } from '@/hooks/useColors';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 interface BarcodeRendererProps {
   aamvaString: string;
   isEmpty?: boolean;
+  onPngReady?: (base64Png: string) => void;
 }
 
-function buildHtml(aamvaString: string, bgColor: string): string {
-  // Safely embed the AAMVA string using JSON.stringify to handle all special chars
+function buildHtml(aamvaString: string): string {
   const safeData = JSON.stringify(aamvaString);
 
   return `<!DOCTYPE html>
@@ -66,9 +62,15 @@ canvas {
       includetext: false,
       padding: 10
     });
-    var h = document.getElementById('bc').getBoundingClientRect().height;
+    var canvas = document.getElementById('bc');
+    var h = canvas.getBoundingClientRect().height;
+    var pngDataUrl = canvas.toDataURL('image/png');
     if (window.ReactNativeWebView) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'height', value: Math.ceil(h) + 48 }));
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'ready',
+        height: Math.ceil(h) + 48,
+        png: pngDataUrl
+      }));
     }
   } catch(e) {
     document.getElementById('bc').style.display = 'none';
@@ -77,7 +79,7 @@ canvas {
     err.textContent = 'Barcode error: ' + e.message;
     document.body.appendChild(err);
     if (window.ReactNativeWebView) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'height', value: 120 }));
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', height: 120 }));
     }
   }
 })();
@@ -86,18 +88,25 @@ canvas {
 </html>`;
 }
 
-export default function BarcodeRenderer({ aamvaString, isEmpty }: BarcodeRendererProps) {
+export default function BarcodeRenderer({ aamvaString, isEmpty, onPngReady }: BarcodeRendererProps) {
   const colors = useColors();
   const [webViewHeight, setWebViewHeight] = useState(220);
   const [isLoading, setIsLoading] = useState(true);
 
-  const html = useMemo(() => buildHtml(aamvaString, colors.background), [aamvaString]);
+  const html = useMemo(() => buildHtml(aamvaString), [aamvaString]);
 
   const handleMessage = (event: { nativeEvent: { data: string } }) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'height' && typeof data.value === 'number') {
-        setWebViewHeight(Math.max(120, data.value));
+      if (data.type === 'ready') {
+        setWebViewHeight(Math.max(120, data.height));
+        if (data.png && onPngReady) {
+          // Strip the "data:image/png;base64," prefix — we only want the raw base64
+          const base64 = (data.png as string).replace(/^data:image\/png;base64,/, '');
+          onPngReady(base64);
+        }
+      } else if (data.type === 'error') {
+        setWebViewHeight(Math.max(120, data.height));
       }
     } catch (_) {}
   };
