@@ -52,8 +52,15 @@ export default function BarcodeScreen() {
       });
 
       if (Platform.OS === 'web') {
-        // Web: trigger a download link
-        await Sharing.shareAsync(fileUri, { mimeType: 'image/png', dialogTitle: 'Save Barcode PNG' });
+        // Web: trigger a browser download directly — no native APIs needed
+        const link = document.createElement('a');
+        link.href = `data:image/png;base64,${base64}`;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setIsSaving(false);
+        return;
       } else {
         // Native: try saving to photo library first
         const { status } = await MediaLibrary.requestPermissionsAsync();
