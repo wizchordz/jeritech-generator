@@ -37,7 +37,8 @@ export interface AamvaFields {
   sex: string;       // '1'=Male, '2'=Female, '9'=Not Specified
   eyeColor: string;  // BLK BLU BRO GRY GRN HAZ MAR PNK DIC UNK
   hairColor: string; // BAL BLK BLN BRO GRY GRN RED SDY WHI UNK
-  height: string;    // FTIN e.g. "510" = 5 ft 10 in
+  height: string;      // digits; interpret per heightUnit
+  heightUnit: 'ftin' | 'cm'; // 'ftin' = FTIN string (e.g. "510" = 5'10"), 'cm' = centimetres
   weight: string;    // lbs (numeric string)
 
   // License
@@ -69,6 +70,7 @@ export const defaultAamvaFields: AamvaFields = {
   eyeColor: 'BRO',
   hairColor: 'BRO',
   height: '',
+  heightUnit: 'ftin',
   weight: '',
   state: '',
   documentNumber: '',
@@ -120,9 +122,21 @@ export function buildAamvaString(fields: AamvaFields): string {
   put('DBC', fields.sex || '1');                         // Sex (1/2/9)
   add('DAY', fields.eyeColor);                           // Eye Color
 
-  // Height: user enters FTIN string (e.g. "510" = 5'10"), output as-is with unit suffix
+  // Height — DAU format per AAMVA v8 spec:
+  //   Imperial: "NNN in" where NNN is TOTAL inches (zero-padded to 3)
+  //             User enters FTIN (e.g. "510" = 5'10") → 5×12+10 = 70 → "070 in"
+  //   Metric:   "NNN cm" — user enters centimetres directly
   if (fields.height.trim()) {
-    elements.push('DAU' + fields.height.trim() + ' in');
+    const raw = fields.height.trim();
+    if (fields.heightUnit === 'cm') {
+      elements.push('DAU' + raw.padStart(3, '0') + ' cm');
+    } else {
+      const totalInches =
+        raw.length >= 3
+          ? parseInt(raw.slice(0, -2), 10) * 12 + parseInt(raw.slice(-2), 10)
+          : parseInt(raw, 10);
+      elements.push('DAU' + String(totalInches).padStart(3, '0') + ' in');
+    }
   }
 
   add('DAG', fields.address);                            // Street Address
