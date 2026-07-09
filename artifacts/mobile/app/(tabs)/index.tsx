@@ -42,6 +42,7 @@ export default function FormScreen() {
   const issueDateRef = useRef<TextInput>(null);
   const expiryDateRef = useRef<TextInput>(null);
   const iinRef = useRef<TextInput>(null);
+  const dcfRef = useRef<TextInput>(null);
   const addressRef = useRef<TextInput>(null);
   const cityRef = useRef<TextInput>(null);
   const zipRef = useRef<TextInput>(null);
@@ -76,7 +77,7 @@ export default function FormScreen() {
         {/* Title */}
         <View style={styles.titleRow}>
           <View>
-            <Text style={[styles.title, { color: colors.foreground }]}>AAMVA Generator</Text>
+            <Text style={[styles.title, { color: colors.foreground }]}>JERITECH Generator</Text>
             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
               PDF417 Driver License / ID Barcode
             </Text>
@@ -272,9 +273,21 @@ export default function FormScreen() {
           onChangeText={(v) => setField('iin', v.replace(/\D/g, '').slice(0, 6))}
           keyboardType="number-pad"
           returnKeyType="next"
-          nextRef={addressRef}
+          nextRef={dcfRef}
           // @ts-ignore
           ref={iinRef}
+        />
+        <FormField
+          label="Document Discriminator (DCF)"
+          placeholder="DDDF1234567890123"
+          hint="Unique document ID assigned by the DMV — distinct from the license number"
+          value={fields.documentDiscriminator}
+          onChangeText={(v) => setField('documentDiscriminator', v.toUpperCase())}
+          autoCapitalize="characters"
+          returnKeyType="next"
+          nextRef={addressRef}
+          // @ts-ignore
+          ref={dcfRef}
         />
 
         {/* ── ADDRESS ──────────────────────────────── */}

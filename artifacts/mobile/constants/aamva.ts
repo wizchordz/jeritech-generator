@@ -1,39 +1,63 @@
 /**
- * AAMVA DL/ID Card Design Standard — Version 8
- * Builds the standard AAMVA string used as the text content of a PDF417 barcode.
+ * AAMVA DL/ID Card Design Standard — Version 8 (2020)
  *
- * Reference: AAMVA DL/ID Card Design Standard, 2020
+ * Reference: AAMVA DL/ID Card Design Standard, 2020 Edition
+ *
+ * Barcode data structure:
+ *   [File Header] [Subfile Designator(s)] [Subfile Content]
+ *
+ * File Header (21 bytes fixed):
+ *   '@'        Compliance Indicator       (0x40)  1 byte
+ *   '\n'       Data Element Separator     (0x0A)  1 byte  ← also used between elements
+ *   '\x1e'     Record Separator           (0x1E)  1 byte
+ *   '\r'       Segment Terminator         (0x0D)  1 byte
+ *   'ANSI '    File Type                          5 bytes
+ *   IIN        Issuer Identification Number        6 bytes
+ *   '08'       AAMVA Version Number                2 bytes
+ *   '00'       Jurisdiction Version Number         2 bytes
+ *   '01'       Number of Subfile Entries           2 bytes
+ *
+ * Subfile Designator (10 bytes per subfile):
+ *   'DL'       Subfile Type               2 bytes
+ *   OOOO       Byte Offset (4 digits)     4 bytes  ← offset from byte 0 of whole string
+ *   LLLL       Byte Length (4 digits)     4 bytes
+ *
+ * Subfile Content:
+ *   'DL'       Type identifier            2 bytes
+ *   '\n'       Element separator
+ *   TAG+VALUE  Each data element terminated by '\n'
  */
 
 export interface AamvaFields {
-  // Section 1: Personal
+  // Personal
   lastName: string;
   firstName: string;
   middleName: string;
-  dob: string;       // MMDDYYYY — Date of Birth
-  sex: string;       // 1=Male, 2=Female, 9=Not Specified
-  eyeColor: string;  // BLK, BLU, BRO, GRY, GRN, HAZ, MAR, PNK, DIC, UNK
-  hairColor: string; // BAL, BLK, BLN, BRO, GRY, GRN, MED, RED, SDY, WHI, UNK
-  height: string;    // FTIN e.g. "510" = 5'10"
+  dob: string;       // MMDDYYYY
+  sex: string;       // '1'=Male, '2'=Female, '9'=Not Specified
+  eyeColor: string;  // BLK BLU BRO GRY GRN HAZ MAR PNK DIC UNK
+  hairColor: string; // BAL BLK BLN BRO GRY GRN RED SDY WHI UNK
+  height: string;    // FTIN e.g. "510" = 5 ft 10 in
   weight: string;    // lbs (numeric string)
 
-  // Section 2: License
-  state: string;          // 2-letter abbreviation e.g. "CA"
-  documentNumber: string; // DAQ — driver license / ID number
-  vehicleClass: string;   // DCA e.g. "C", "D", "A"
-  restrictions: string;   // DCB e.g. "NONE" or "B"
-  endorsements: string;   // DCD e.g. "NONE" or "H"
-  issueDate: string;      // MMDDYYYY
-  expiryDate: string;     // MMDDYYYY
-  iin: string;            // 6-digit Issuer Identification Number
+  // License
+  state: string;                 // 2-letter abbreviation
+  documentNumber: string;        // DAQ — driver license / ID number
+  documentDiscriminator: string; // DCF — Document Discriminator (unique doc ID)
+  vehicleClass: string;          // DCA e.g. 'C'
+  restrictions: string;          // DCB e.g. 'NONE'
+  endorsements: string;          // DCD e.g. 'NONE'
+  issueDate: string;             // MMDDYYYY
+  expiryDate: string;            // MMDDYYYY
+  iin: string;                   // 6-digit Issuer Identification Number
 
-  // Section 3: Address
-  address: string; // Street address
+  // Address
+  address: string;
   city: string;
-  zip: string;     // 9 chars, pad with spaces if needed
+  zip: string; // 9 chars — ZIP+4, pad with spaces if 5-digit only
 
-  // Optional
-  country: string; // USA or CAN
+  // Metadata
+  country: string; // 'USA' or 'CAN'
 }
 
 export const defaultAamvaFields: AamvaFields = {
@@ -48,6 +72,7 @@ export const defaultAamvaFields: AamvaFields = {
   weight: '',
   state: '',
   documentNumber: '',
+  documentDiscriminator: '',
   vehicleClass: 'C',
   restrictions: 'NONE',
   endorsements: 'NONE',
@@ -61,65 +86,101 @@ export const defaultAamvaFields: AamvaFields = {
 };
 
 /**
- * Build a valid AAMVA v8 string from the provided fields.
+ * Build a fully AAMVA v8–compliant barcode string.
  *
- * Structure:
- *   [Header] + [Designators] + [SubfileContent]
- *
- * Header:   "@\n\x1e\rANSI " + IIN(6) + AAMVA_VER(2) + JURIS_VER(2) + NUM_SUBFILES(2) + "\r"
- * Designator: "DL" + offset(4) + length(4)
- * Subfile:  "DL\r" + data elements joined by "\r" + "\r"
+ * All mandatory data elements are included per the 2020 spec.
+ * The Data Element Separator is LF (0x0A) — NOT CR (0x0D).
  */
 export function buildAamvaString(fields: AamvaFields): string {
+  const SEP = '\n'; // 0x0A — AAMVA Data Element Separator
   const iin = (fields.iin || '636033').padStart(6, '0').slice(0, 6);
 
-  // Build ordered data elements — only include non-empty values
-  const el = (tag: string, value: string) =>
-    value.trim() ? `${tag}${value.trim()}` : null;
+  const elements: string[] = [];
 
-  const elements: string[] = [
-    el('DAQ', fields.documentNumber),
-    el('DCS', fields.lastName),
-    el('DAC', fields.firstName),
-    el('DAD', fields.middleName),
-    el('DBA', fields.expiryDate),
-    el('DBD', fields.issueDate),
-    el('DBB', fields.dob),
-    el('DCA', fields.vehicleClass),
-    el('DCB', fields.restrictions),
-    el('DCD', fields.endorsements),
-    el('DAG', fields.address),
-    el('DAI', fields.city),
-    el('DAJ', fields.state),
-    // ZIP must be exactly 9 chars, right-padded with spaces
-    fields.zip.trim()
-      ? `DAK${fields.zip.trim().padEnd(9, ' ').slice(0, 9)}`
-      : null,
-    el('DAY', fields.eyeColor),
-    el('DAZ', fields.hairColor),
-    el('DAU', fields.height),
-    el('DAW', fields.weight),
-    el('DBC', fields.sex),
-    `DCG${fields.country || 'USA'}`,
-  ].filter((e): e is string => e !== null);
+  /** Add element only if value is non-empty */
+  const add = (tag: string, value: string) => {
+    const v = value.trim();
+    if (v) elements.push(tag + v);
+  };
 
-  // Subfile content: type identifier + data rows
-  const subfileContent = 'DL\r' + elements.join('\r') + '\r';
+  /** Always add element regardless of value */
+  const put = (tag: string, value: string) => elements.push(tag + value);
 
-  // Header line: 9-char prefix + IIN + version info + CR
-  // "@" + LF + RS(0x1e) + CR + "ANSI " = 9 chars
-  // + IIN(6) + AAMVA_VER "08" + JURIS_VER "01" + NUM_SUBFILES "01" + CR
-  const headerLine = `@\n\x1e\rANSI ${iin}080101\r`;
+  // ── Mandatory fields per AAMVA v8 §D.2 (order follows the spec) ──────────
 
-  // Designator: "DL" (2) + offset (4) + length (4) = 10 chars total
-  const offset = headerLine.length + 10;
-  const length = subfileContent.length;
-  const designator = `DL${String(offset).padStart(4, '0')}${String(length).padStart(4, '0')}`;
+  add('DCA', fields.vehicleClass);                       // Vehicle Class
+  add('DCB', fields.restrictions || 'NONE');             // Restrictions
+  add('DCD', fields.endorsements || 'NONE');             // Endorsements
+  add('DBA', fields.expiryDate);                         // Expiration Date (MMDDYYYY)
+  add('DCS', fields.lastName);                           // Family Name
+  add('DAC', fields.firstName);                          // First Name
+  add('DAD', fields.middleName);                         // Middle Name
+  add('DBD', fields.issueDate);                          // Issue Date (MMDDYYYY)
+  add('DBB', fields.dob);                                // Date of Birth (MMDDYYYY)
+  put('DBC', fields.sex || '1');                         // Sex (1/2/9)
+  add('DAY', fields.eyeColor);                           // Eye Color
 
-  return headerLine + designator + subfileContent;
+  // Height: user enters FTIN digits (e.g. "510"), AAMVA wants "510 in"
+  if (fields.height.trim()) {
+    elements.push('DAU' + fields.height.trim() + ' in');
+  }
+
+  add('DAG', fields.address);                            // Street Address
+  add('DAI', fields.city);                               // City
+
+  // State (DAJ): uppercase 2-letter abbreviation
+  if (fields.state.trim()) {
+    elements.push('DAJ' + fields.state.trim().toUpperCase());
+  }
+
+  // Postal Code (DAK): exactly 9 chars, right-padded with spaces
+  if (fields.zip.trim()) {
+    elements.push('DAK' + fields.zip.trim().padEnd(9, ' ').slice(0, 9));
+  }
+
+  add('DAQ', fields.documentNumber);                     // License Number
+
+  // DCF — Document Discriminator (mandatory in v8)
+  add('DCF', fields.documentDiscriminator);
+
+  put('DCG', fields.country || 'USA');                   // Country (USA/CAN)
+
+  // ── Optional but commonly present ────────────────────────────────────────
+
+  add('DAZ', fields.hairColor);                          // Hair Color
+  add('DAW', fields.weight);                             // Weight (lbs)
+
+  // Truncation indicators — N = Not truncated, T = Truncated, U = Unknown
+  // Required mandatory fields in AAMVA v8
+  put('DDE', 'N');  // Family name truncation
+  put('DDF', 'N');  // First name truncation
+  put('DDG', 'N');  // Middle name truncation
+
+  // ── Assemble the subfile ──────────────────────────────────────────────────
+
+  // Subfile: type identifier + SEP + elements each terminated by SEP
+  const subfileBody = 'DL' + SEP + elements.join(SEP) + SEP;
+
+  // ── Assemble the header ───────────────────────────────────────────────────
+  //
+  // Fixed 21-byte header prefix (no trailing CR):
+  //   '@\n\x1e\r' (4) + 'ANSI ' (5) + IIN (6) + '08' (2) + '00' (2) + '01' (2)
+  //
+  const headerPrefix = '@\n\x1e\rANSI ' + iin + '080001';
+  // Offset to subfile = headerPrefix (21) + one designator (10) = 31
+  const offset = headerPrefix.length + 10; // always 31
+  const length = subfileBody.length;
+  const designator =
+    'DL' +
+    String(offset).padStart(4, '0') +
+    String(length).padStart(4, '0');
+
+  return headerPrefix + designator + subfileBody;
 }
 
-/** Maps US state abbreviations to AAMVA Issuer Identification Numbers */
+// ── State → IIN lookup ────────────────────────────────────────────────────
+
+/** Maps US state/territory abbreviations to AAMVA Issuer Identification Numbers */
 export const STATE_IIN: Record<string, string> = {
   AL: '636000', AK: '994000', AZ: '636026', AR: '636021', CA: '636033',
   CO: '636020', CT: '636006', DE: '636011', FL: '636010', GA: '636055',
@@ -134,28 +195,30 @@ export const STATE_IIN: Record<string, string> = {
   DC: '636043', PR: '636052',
 };
 
+// ── Lookup tables ─────────────────────────────────────────────────────────
+
 export const EYE_COLORS = [
-  { label: 'Black', value: 'BLK' },
-  { label: 'Blue', value: 'BLU' },
-  { label: 'Brown', value: 'BRO' },
-  { label: 'Gray', value: 'GRY' },
-  { label: 'Green', value: 'GRN' },
-  { label: 'Hazel', value: 'HAZ' },
-  { label: 'Maroon', value: 'MAR' },
-  { label: 'Pink', value: 'PNK' },
+  { label: 'Black',       value: 'BLK' },
+  { label: 'Blue',        value: 'BLU' },
+  { label: 'Brown',       value: 'BRO' },
+  { label: 'Gray',        value: 'GRY' },
+  { label: 'Green',       value: 'GRN' },
+  { label: 'Hazel',       value: 'HAZ' },
+  { label: 'Maroon',      value: 'MAR' },
+  { label: 'Pink',        value: 'PNK' },
   { label: 'Dichromatic', value: 'DIC' },
-  { label: 'Unknown', value: 'UNK' },
+  { label: 'Unknown',     value: 'UNK' },
 ];
 
 export const HAIR_COLORS = [
-  { label: 'Bald', value: 'BAL' },
-  { label: 'Black', value: 'BLK' },
-  { label: 'Blond', value: 'BLN' },
-  { label: 'Brown', value: 'BRO' },
-  { label: 'Gray', value: 'GRY' },
-  { label: 'Green', value: 'GRN' },
-  { label: 'Red/Auburn', value: 'RED' },
-  { label: 'Sandy', value: 'SDY' },
-  { label: 'White', value: 'WHI' },
-  { label: 'Unknown', value: 'UNK' },
+  { label: 'Bald',        value: 'BAL' },
+  { label: 'Black',       value: 'BLK' },
+  { label: 'Blond',       value: 'BLN' },
+  { label: 'Brown',       value: 'BRO' },
+  { label: 'Gray',        value: 'GRY' },
+  { label: 'Green',       value: 'GRN' },
+  { label: 'Red/Auburn',  value: 'RED' },
+  { label: 'Sandy',       value: 'SDY' },
+  { label: 'White',       value: 'WHI' },
+  { label: 'Unknown',     value: 'UNK' },
 ];
