@@ -155,18 +155,62 @@ export default function FormScreen() {
           onSelect={(v) => setField('hairColor', v)}
         />
 
-        <FormField
-          label="Height"
-          placeholder="510  (5 feet 10 inches)"
-          hint={"Format: FTIN — e.g. 510 = 5'10\", 600 = 6'0\""}
-          value={fields.height}
-          onChangeText={(v) => setField('height', v.replace(/\D/g, '').slice(0, 3))}
-          keyboardType="number-pad"
-          returnKeyType="next"
-          nextRef={weightRef}
-          // @ts-ignore
-          ref={heightRef}
-        />
+        {/* ── Height with unit toggle ──────────────── */}
+        <View style={styles.heightRow}>
+          <View style={styles.heightField}>
+            <FormField
+              label="Height"
+              placeholder={fields.heightUnit === 'ftin' ? "510  (5 ft 10 in)" : "178  (centimetres)"}
+              hint={
+                fields.heightUnit === 'ftin'
+                  ? "FTIN — first digit(s) feet, last two inches: 510 = 5'10\""
+                  : "Enter height in centimetres, e.g. 178"
+              }
+              value={fields.height}
+              onChangeText={(v) =>
+                setField('height', v.replace(/\D/g, '').slice(0, fields.heightUnit === 'ftin' ? 3 : 3))
+              }
+              keyboardType="number-pad"
+              returnKeyType="next"
+              nextRef={weightRef}
+              // @ts-ignore
+              ref={heightRef}
+            />
+          </View>
+          {/* Unit toggle */}
+          <View style={styles.heightToggle}>
+            <TouchableOpacity
+              style={[
+                styles.unitBtn,
+                fields.heightUnit === 'ftin' && { backgroundColor: colors.primary },
+              ]}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setField('heightUnit', 'ftin');
+                setField('height', '');
+              }}
+            >
+              <Text style={[styles.unitBtnText, { color: fields.heightUnit === 'ftin' ? '#fff' : colors.mutedForeground }]}>
+                ft/in
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.unitBtn,
+                fields.heightUnit === 'cm' && { backgroundColor: colors.primary },
+              ]}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setField('heightUnit', 'cm');
+                setField('height', '');
+              }}
+            >
+              <Text style={[styles.unitBtnText, { color: fields.heightUnit === 'cm' ? '#fff' : colors.mutedForeground }]}>
+                cm
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         <FormField
           label="Weight (lbs)"
           placeholder="175"
@@ -399,6 +443,33 @@ const styles = StyleSheet.create({
   },
   generateBtnText: {
     fontSize: 16,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  heightRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    paddingRight: 16,
+  },
+  heightField: {
+    flex: 1,
+  },
+  heightToggle: {
+    flexDirection: 'column',
+    gap: 6,
+    marginTop: 28, // align with the text input (below label)
+  },
+  unitBtn: {
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    alignItems: 'center',
+    minWidth: 44,
+  },
+  unitBtnText: {
+    fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
   },
 });
