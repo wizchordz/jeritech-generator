@@ -33,13 +33,12 @@ export interface AamvaFields {
   lastName: string;
   firstName: string;
   middleName: string;
-  dob: string;         // MMDDYYYY
-  sex: string;         // '1'=Male, '2'=Female, '9'=Not Specified
-  eyeColor: string;    // BLK BLU BRO GRY GRN HAZ MAR PNK DIC UNK
-  hairColor: string;   // BAL BLK BLN BRO GRY GRN RED SDY WHI UNK
-  height: string;      // digits; interpret per heightUnit
-  heightUnit: 'ftin' | 'cm'; // 'ftin' = FTIN string (e.g. "510" = 5'10"), 'cm' = centimetres
-  weight: string;      // lbs (numeric string)
+  dob: string;       // MMDDYYYY
+  sex: string;       // '1'=Male, '2'=Female, '9'=Not Specified
+  eyeColor: string;  // BLK BLU BRO GRY GRN HAZ MAR PNK DIC UNK
+  hairColor: string; // BAL BLK BLN BRO GRY GRN RED SDY WHI UNK
+  height: string;    // FTIN e.g. "510" = 5 ft 10 in
+  weight: string;    // lbs (numeric string)
 
   // License
   state: string;                 // 2-letter abbreviation
@@ -70,7 +69,6 @@ export const defaultAamvaFields: AamvaFields = {
   eyeColor: 'BRO',
   hairColor: 'BRO',
   height: '',
-  heightUnit: 'ftin',
   weight: '',
   state: '',
   documentNumber: '',
@@ -122,28 +120,9 @@ export function buildAamvaString(fields: AamvaFields): string {
   put('DBC', fields.sex || '1');                         // Sex (1/2/9)
   add('DAY', fields.eyeColor);                           // Eye Color
 
-  // Height — DAU format per AAMVA v8 spec:
-  //   Imperial: "NNN in" where NNN is TOTAL inches (2-3 digits, zero-padded to 3)
-  //             e.g. 5'10" = 70 inches → "070 in"
-  //   Metric:   "NNN cm" where NNN is centimetres
-  //             e.g. 178 cm → "178 cm"
-  //
-  // User FTIN input (e.g. "510") encodes feet+inches as a 3-digit string:
-  //   last 2 chars = inches, everything before = feet
-  //   "510" → feet=5, inches=10 → 5*12+10 = 70 → "070 in"
+  // Height: user enters FTIN string (e.g. "510" = 5'10"), output as-is with unit suffix
   if (fields.height.trim()) {
-    const raw = fields.height.trim();
-    if (fields.heightUnit === 'cm') {
-      // Already in centimetres — output directly
-      elements.push('DAU' + raw.padStart(3, '0') + ' cm');
-    } else {
-      // FTIN string → convert to total inches
-      const totalInches =
-        raw.length >= 3
-          ? parseInt(raw.slice(0, -2), 10) * 12 + parseInt(raw.slice(-2), 10)
-          : parseInt(raw, 10); // fallback for very short input
-      elements.push('DAU' + String(totalInches).padStart(3, '0') + ' in');
-    }
+    elements.push('DAU' + fields.height.trim() + ' in');
   }
 
   add('DAG', fields.address);                            // Street Address
@@ -176,11 +155,6 @@ export function buildAamvaString(fields: AamvaFields): string {
   put('DDE', 'N');  // Family name truncation
   put('DDF', 'N');  // First name truncation
   put('DDG', 'N');  // Middle name truncation
-
-  // REAL ID / Enhanced DL compliance type (AAMVA v8 optional but checked by scanners)
-  // 'F' = Full compliance (REAL ID Act)
-  // 'N' = Non-compliant
-  put('DDA', 'F');  // Compliance type — REAL ID Full
 
   // ── Assemble the subfile ──────────────────────────────────────────────────
 
