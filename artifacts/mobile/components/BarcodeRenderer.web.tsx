@@ -47,7 +47,7 @@ export default function BarcodeRenderer({
         bwipjs.toCanvas(canvas, {
           bcid: 'pdf417',
           text: aamvaString,
-          scale: 3,
+          scale: 6,
           height: 10,
           includetext: false,
           paddingwidth: 10,

@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
 import * as MediaLibrary from 'expo-media-library';
@@ -99,6 +100,14 @@ export default function BarcodeScreen() {
     } catch (_) {}
   };
 
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await Clipboard.setStringAsync(aamvaString);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const toggleRaw = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowRaw((v) => !v);
@@ -127,14 +136,23 @@ export default function BarcodeScreen() {
               AAMVA Driver License / ID Standard v8
             </Text>
           </View>
-          {/* Share raw text button */}
-          <TouchableOpacity
-            style={[styles.iconBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
-            onPress={handleShareText}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="share-outline" size={18} color={colors.foreground} />
-          </TouchableOpacity>
+          {/* Copy + Share buttons */}
+          <View style={styles.headerBtns}>
+            <TouchableOpacity
+              style={[styles.iconBtn, { backgroundColor: copied ? colors.primary : colors.secondary, borderColor: colors.border }]}
+              onPress={handleCopy}
+              activeOpacity={0.8}
+            >
+              <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={18} color={copied ? colors.primaryForeground : colors.foreground} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.iconBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+              onPress={handleShareText}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="share-outline" size={18} color={colors.foreground} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Barcode */}
@@ -209,7 +227,19 @@ export default function BarcodeScreen() {
 
         {showRaw && (
           <View style={[styles.rawContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.rawLabel, { color: colors.mutedForeground }]}>RAW OUTPUT</Text>
+            <View style={styles.rawHeader}>
+              <Text style={[styles.rawLabel, { color: colors.mutedForeground }]}>RAW OUTPUT</Text>
+              <TouchableOpacity
+                style={[styles.copyRawBtn, { backgroundColor: copied ? colors.primary : colors.secondary, borderColor: colors.border }]}
+                onPress={handleCopy}
+                activeOpacity={0.8}
+              >
+                <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={13} color={copied ? colors.primaryForeground : colors.foreground} />
+                <Text style={[styles.copyRawText, { color: copied ? colors.primaryForeground : colors.foreground }]}>
+                  {copied ? 'Copied!' : 'Copy'}
+                </Text>
+              </TouchableOpacity>
+            </View>
             <ScrollView horizontal showsHorizontalScrollIndicator>
               <Text style={[styles.rawText, { color: colors.foreground }]}>
                 {formatRawForDisplay(aamvaString)}
@@ -265,6 +295,10 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 22, fontFamily: 'Inter_700Bold' },
   headerSub: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  headerBtns: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   iconBtn: {
     width: 38,
     height: 38,
@@ -326,7 +360,22 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 8,
   },
+  rawHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   rawLabel: { fontSize: 10, fontFamily: 'Inter_600SemiBold', letterSpacing: 1 },
+  copyRawBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  copyRawText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
   rawText: {
     fontSize: 12,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',

@@ -58,7 +58,7 @@ canvas {
     bwipjs.toCanvas('bc', {
       bcid: 'pdf417',
       text: text,
-      scale: 3,
+      scale: 6,
       height: 10,
       includetext: false,
       padding: 10
