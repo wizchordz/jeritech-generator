@@ -23,6 +23,7 @@
         "backgroundColor": "#0d1117"
       },
       "permissions": [
+        "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
@@ -43,6 +44,13 @@
       ],
       "expo-font",
       "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow JERITECH Generator to read your photo library to scan a driver's licence.",
+          "cameraPermission": "Allow JERITECH Generator to use the camera to scan a driver's licence."
+        }
+      ],
       [
         "expo-media-library",
         {

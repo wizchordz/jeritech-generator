@@ -1,5 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Platform,
   StyleSheet,
   Text,
@@ -9,11 +11,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { FormField, SectionHeader, SelectField } from '@/components/FormField';
-import { EYE_COLORS, HAIR_COLORS } from '@/constants/aamva';
+import { AamvaFields, EYE_COLORS, HAIR_COLORS } from '@/constants/aamva';
+import { API_BASE_URL } from '@/constants/config';
 import { useBarcodeContext } from '@/context/BarcodeContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -57,6 +61,98 @@ export default function FormScreen() {
     resetFields();
   };
 
+  const [isScanning, setIsScanning] = useState(false);
+
+  const handleScanLicense = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert('Scan Licence', 'Choose an image source', [
+      {
+        text: 'Take Photo',
+        onPress: () => launchOcr('camera'),
+      },
+      {
+        text: 'Choose from Gallery',
+        onPress: () => launchOcr('library'),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const launchOcr = async (source: 'camera' | 'library') => {
+    try {
+      let result: ImagePicker.ImagePickerResult;
+
+      if (source === 'camera') {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission denied', 'Camera access is required to take a photo.');
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],
+          quality: 0.9,
+          base64: true,
+        });
+      } else {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission denied', 'Photo library access is required.');
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          quality: 0.9,
+          base64: true,
+        });
+      }
+
+      if (result.canceled || !result.assets?.[0]) return;
+
+      const asset = result.assets[0];
+      if (!asset.base64) {
+        Alert.alert('Error', 'Could not read image data.');
+        return;
+      }
+
+      setIsScanning(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      const response = await fetch(`${API_BASE_URL}/api/ocr/scan-license`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: asset.base64,
+          mimeType: asset.mimeType ?? 'image/jpeg',
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(err.error ?? `Server error ${response.status}`);
+      }
+
+      const data = await response.json() as { success: boolean; fields: Partial<AamvaFields> };
+      const extracted = data.fields ?? {};
+
+      // Fill every non-empty extracted field
+      (Object.keys(extracted) as (keyof AamvaFields)[]).forEach((key) => {
+        const val = extracted[key];
+        if (val !== undefined && val !== '') {
+          // @ts-ignore — dynamic setField
+          setField(key, val);
+        }
+      });
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Licence scanned ✓', 'Fields have been filled in. Review and adjust anything that looks off.');
+    } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Scan failed', (err as Error).message ?? 'Unknown error. Please try again.');
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   const webTopPadding = Platform.OS === 'web' ? 67 : 0;
   const webBottomPadding = Platform.OS === 'web' ? 34 : 0;
 
@@ -86,6 +182,32 @@ export default function FormScreen() {
             <Ionicons name="refresh-outline" size={20} color={colors.mutedForeground} />
           </TouchableOpacity>
         </View>
+
+        {/* ── SCAN LICENCE ─────────────────────────── */}
+        <TouchableOpacity
+          style={[styles.scanBtn, { backgroundColor: colors.card, borderColor: colors.primary }]}
+          onPress={handleScanLicense}
+          activeOpacity={0.8}
+          disabled={isScanning}
+        >
+          {isScanning ? (
+            <>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={[styles.scanBtnText, { color: colors.primary }]}>Scanning…</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="scan-outline" size={22} color={colors.primary} />
+              <View style={styles.scanBtnBody}>
+                <Text style={[styles.scanBtnText, { color: colors.primary }]}>Scan Licence Front</Text>
+                <Text style={[styles.scanBtnSub, { color: colors.mutedForeground }]}>
+                  AI reads your licence image and fills in all fields automatically
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+            </>
+          )}
+        </TouchableOpacity>
 
         {/* ── PERSONAL ─────────────────────────────── */}
         <SectionHeader title="Personal" subtitle="Driver's license holder information" />
@@ -406,6 +528,29 @@ const styles = StyleSheet.create({
   },
   resetBtn: {
     padding: 8,
+  },
+  scanBtn: {
+    marginHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  scanBtnBody: {
+    flex: 1,
+    gap: 2,
+  },
+  scanBtnText: {
+    fontSize: 15,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  scanBtnSub: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 16,
   },
   footer: {
     position: 'absolute',
