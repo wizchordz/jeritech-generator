@@ -127,11 +127,19 @@ export default function FormScreen() {
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({})) as { error?: string };
-        throw new Error(err.error ?? `Server error ${response.status}`);
+        const text = await response.text().catch(() => '');
+        let msg = `Server error ${response.status}`;
+        try { msg = (JSON.parse(text) as { error?: string }).error ?? msg; } catch { /* HTML body */ }
+        throw new Error(msg);
       }
 
-      const data = await response.json() as { success: boolean; fields: Partial<AamvaFields> };
+      const text = await response.text();
+      let data: { success: boolean; fields: Partial<AamvaFields> };
+      try {
+        data = JSON.parse(text) as typeof data;
+      } catch {
+        throw new Error('Unexpected response from server. Check the API is running.');
+      }
       const extracted = data.fields ?? {};
 
       // Fill every non-empty extracted field
