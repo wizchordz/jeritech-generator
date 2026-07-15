@@ -16,7 +16,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { FormField, SectionHeader, SelectField } from '@/components/FormField';
-import { AamvaFields, EYE_COLORS, HAIR_COLORS } from '@/constants/aamva';
+import { AamvaFields, COMPLIANCE_TYPES, EYE_COLORS, HAIR_COLORS, RACE_ETHNICITY } from '@/constants/aamva';
 import { API_BASE_URL } from '@/constants/config';
 import { useBarcodeContext } from '@/context/BarcodeContext';
 import { useColors } from '@/hooks/useColors';
@@ -47,6 +47,9 @@ export default function FormScreen() {
   const expiryDateRef = useRef<TextInput>(null);
   const iinRef = useRef<TextInput>(null);
   const dcfRef = useRef<TextInput>(null);
+  const invCtrlRef = useRef<TextInput>(null);
+  const cardRevDateRef = useRef<TextInput>(null);
+  const jurisdictionRef = useRef<TextInput>(null);
   const addressRef = useRef<TextInput>(null);
   const cityRef = useRef<TextInput>(null);
   const zipRef = useRef<TextInput>(null);
@@ -442,9 +445,63 @@ export default function FormScreen() {
           onChangeText={(v) => setField('documentDiscriminator', v.toUpperCase())}
           autoCapitalize="characters"
           returnKeyType="next"
-          nextRef={addressRef}
+          nextRef={invCtrlRef}
           // @ts-ignore
           ref={dcfRef}
+        />
+        <FormField
+          label="Inventory Control Number (DCK)"
+          placeholder="10006128248"
+          hint="Printed inventory / audit number on the card — leave blank if not shown"
+          value={fields.inventoryControlNumber}
+          onChangeText={(v) => setField('inventoryControlNumber', v.toUpperCase())}
+          autoCapitalize="characters"
+          returnKeyType="next"
+          nextRef={cardRevDateRef}
+          // @ts-ignore
+          ref={invCtrlRef}
+        />
+        <SelectField
+          label="Race / Ethnicity (DCL)"
+          value={fields.raceEthnicity}
+          options={[{ label: '— Not specified —', value: '' }, ...RACE_ETHNICITY]}
+          onSelect={(v: string) => setField('raceEthnicity', v)}
+        />
+        <SelectField
+          label="Compliance Type (DDA)"
+          value={fields.complianceType}
+          options={COMPLIANCE_TYPES}
+          onSelect={(v: string) => setField('complianceType', v)}
+        />
+        <FormField
+          label="Card Revision Date (DDB)"
+          placeholder="02232020  (MMDDYYYY)"
+          hint="Date the card design was last revised — from the DMV system"
+          value={fields.cardRevisionDate}
+          onChangeText={(v) => setField('cardRevisionDate', v.replace(/\D/g, '').slice(0, 8))}
+          keyboardType="number-pad"
+          returnKeyType="next"
+          nextRef={jurisdictionRef}
+          // @ts-ignore
+          ref={cardRevDateRef}
+        />
+
+        {/* ── JURISDICTION ─────────────────────────── */}
+        <SectionHeader
+          title="Jurisdiction Subfile (ZT)"
+          subtitle="State-specific data appended as a second subfile. Leave blank to omit."
+        />
+        <FormField
+          label="Jurisdiction Data"
+          placeholder="ZTAN"
+          hint={'TX example: ZTAN · VA example: ZVAN · Leave blank to generate a single-subfile barcode'}
+          value={fields.jurisdictionData}
+          onChangeText={(v) => setField('jurisdictionData', v.toUpperCase())}
+          autoCapitalize="characters"
+          returnKeyType="next"
+          nextRef={addressRef}
+          // @ts-ignore
+          ref={jurisdictionRef}
         />
 
         {/* ── ADDRESS ──────────────────────────────── */}

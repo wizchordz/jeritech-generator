@@ -39,6 +39,11 @@ Required JSON shape:
   "endorsements": "endorsement codes as printed, or NONE",
   "issueDate": "MMDDYYYY — issue date (8 digits, no slashes)",
   "expiryDate": "MMDDYYYY — expiration date (8 digits, no slashes)",
+  "inventoryControlNumber": "inventory/audit control number printed on the card, or empty",
+  "raceEthnicity": "AAMVA code: W|BK|AI|AP|H|O|U — or empty if not shown",
+  "complianceType": "F if REAL ID star present/compliant, N if not compliant",
+  "cardRevisionDate": "MMDDYYYY card revision date if printed, else empty",
+  "jurisdictionData": "jurisdiction element value only e.g. ZTAN for TX, ZVAN for VA — empty if unsure",
   "country": "USA"
 }
 
