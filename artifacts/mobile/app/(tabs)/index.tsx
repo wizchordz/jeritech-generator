@@ -439,8 +439,8 @@ export default function FormScreen() {
         />
         <FormField
           label="Document Discriminator (DCF)"
-          placeholder="DDDF1234567890123"
-          hint="Unique document ID assigned by the DMV — distinct from the license number"
+          placeholder="18224100142025987869"
+          hint="Unique doc ID from the DMV system — must match what's encoded on the physical card. TX example: 18224100142025987869 (20 digits). Wrong value = Regula text-field failure."
           value={fields.documentDiscriminator}
           onChangeText={(v) => setField('documentDiscriminator', v.toUpperCase())}
           autoCapitalize="characters"

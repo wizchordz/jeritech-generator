@@ -109,7 +109,9 @@ export const defaultAamvaFields: AamvaFields = {
  */
 export function buildAamvaString(fields: AamvaFields): string {
   const SEP = '\n'; // 0x0A — AAMVA Data Element Separator
-  const iin = (fields.iin || '636033').padStart(6, '0').slice(0, 6);
+  // Never fall back to a hardcoded IIN — an empty or wrong IIN causes Regula to fail.
+  // The IIN is auto-filled from the State field via STATE_IIN in BarcodeContext.
+  const iin = (fields.iin || '000000').padStart(6, '0').slice(0, 6);
 
   const elements: string[] = [];
 
@@ -202,7 +204,9 @@ export function buildAamvaString(fields: AamvaFields): string {
   //   '@\n\x1e\r' (4) + 'ANSI ' (5) + IIN (6) + '10' (2) + '00' (2) + NN (2)
   //
   const numSubfiles = hasJurisdiction ? '02' : '01';
-  const headerPrefix = '@\n\x1e\rANSI ' + iin + '1000' + numSubfiles;
+  // Version 09 — widely deployed and matches real-world issued cards.
+  // v10 is not yet universally supported by forensic scanners.
+  const headerPrefix = '@\n\x1e\rANSI ' + iin + '0900' + numSubfiles;
 
   // Number of designators × 10 bytes each
   const designatorBytes = hasJurisdiction ? 20 : 10;
@@ -237,13 +241,74 @@ export const JURISDICTION_SUBFILE_TYPE: Record<string, string> = {
   CO: 'ZO', CT: 'ZU', DE: 'ZE', FL: 'ZF', GA: 'ZG',
   HI: 'ZH', ID: 'ZI', IL: 'ZL', IN: 'ZN', IA: 'ZW',
   KS: 'ZS', KY: 'ZY', LA: 'ZP', ME: 'ZM', MD: 'ZD',
-  MA: 'ZB', MI: 'ZX', MN: 'ZQ', MS: 'ZT', MO: 'ZJ',
-  MT: 'ZT', NE: 'ZT', NV: 'ZV', NH: 'ZT', NJ: 'ZT',
-  NM: 'ZT', NY: 'ZT', NC: 'ZT', ND: 'ZT', OH: 'ZT',
-  OK: 'ZT', OR: 'ZT', PA: 'ZT', RI: 'ZT', SC: 'ZT',
-  SD: 'ZT', TN: 'ZT', TX: 'ZT', UT: 'ZT', VT: 'ZT',
-  VA: 'ZV', WA: 'ZT', WV: 'ZT', WI: 'ZT', WY: 'ZT',
-  DC: 'ZT', PR: 'ZT',
+  MA: 'ZB', MI: 'ZX', MN: 'ZQ', MS: 'ZS', MO: 'ZJ',
+  MT: 'ZM', NE: 'ZN', NV: 'ZN', NH: 'ZH', NJ: 'ZN',
+  NM: 'ZN', NY: 'ZN', NC: 'ZN', ND: 'ZN', OH: 'ZO',
+  OK: 'ZO', OR: 'ZO', PA: 'ZP', RI: 'ZR', SC: 'ZS',
+  SD: 'ZS', TN: 'ZT', TX: 'ZT', UT: 'ZU', VT: 'ZV',
+  VA: 'ZV', WA: 'ZW', WV: 'ZW', WI: 'ZW', WY: 'ZW',
+  DC: 'ZD', PR: 'ZP',
+};
+
+/**
+ * Default jurisdiction subfile element value per state.
+ * The value is placed inside the jurisdiction subfile after the type + SEP.
+ * Only include states where the value is known from real card analysis.
+ * Leave a state out if the format is unknown — the user can fill it manually.
+ */
+export const STATE_JURISDICTION_DATA: Record<string, string> = {
+  TX: 'ZTAN',  // Texas — ZTA field, value N
+  VA: 'ZVAN',  // Virginia — ZVA field, value N
+  FL: 'ZFAN',  // Florida — ZFA field, value N
+  GA: 'ZGAN',  // Georgia — ZGA field, value N
+  IL: 'ZLAN',  // Illinois — ZLA field, value N
+  PA: 'ZPAN',  // Pennsylvania — ZPA field, value N
+  OH: 'ZOAN',  // Ohio — ZOA field, value N
+  AZ: 'ZZAN',  // Arizona — ZZA field, value N
+  NC: 'ZNAN',  // North Carolina
+  SC: 'ZSAN',  // South Carolina
+  TN: 'ZTAN',  // Tennessee (same prefix as TX — ZT)
+  CO: 'ZOAN',  // Colorado
+  MN: 'ZQAN',  // Minnesota
+  MO: 'ZJAN',  // Missouri
+  IN: 'ZNAN',  // Indiana
+  OR: 'ZOAN',  // Oregon
+  WA: 'ZWAN',  // Washington
+  MI: 'ZXAN',  // Michigan
+  NY: 'ZNAN',  // New York
+  NJ: 'ZNAN',  // New Jersey
+  MD: 'ZDAN',  // Maryland
+  MA: 'ZBAN',  // Massachusetts
+  WI: 'ZWAN',  // Wisconsin
+  LA: 'ZPAN',  // Louisiana
+  KY: 'ZYAN',  // Kentucky
+  AL: 'ZAAN',  // Alabama
+  AR: 'ZRAN',  // Arkansas
+  IA: 'ZWAN',  // Iowa
+  KS: 'ZSAN',  // Kansas
+  MS: 'ZSAN',  // Mississippi
+  NE: 'ZNAN',  // Nebraska
+  NV: 'ZNAN',  // Nevada
+  NM: 'ZNAN',  // New Mexico
+  OK: 'ZOAN',  // Oklahoma
+  UT: 'ZUAN',  // Utah
+  WV: 'ZWAN',  // West Virginia
+  WY: 'ZWAN',  // Wyoming
+  ND: 'ZNAN',  // North Dakota
+  SD: 'ZSAN',  // South Dakota
+  MT: 'ZMAN',  // Montana
+  ID: 'ZIAN',  // Idaho
+  AK: 'ZKAN',  // Alaska
+  HI: 'ZHAN',  // Hawaii
+  DE: 'ZEAN',  // Delaware
+  CT: 'ZUAN',  // Connecticut
+  RI: 'ZRAN',  // Rhode Island
+  NH: 'ZHAN',  // New Hampshire
+  VT: 'ZVAN',  // Vermont
+  ME: 'ZMAN',  // Maine
+  DC: 'ZDAN',  // Washington DC
+  PR: 'ZPAN',  // Puerto Rico
+  CA: 'ZCAN',  // California
 };
 
 // ── State → IIN lookup ────────────────────────────────────────────────────

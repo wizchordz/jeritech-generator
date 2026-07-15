@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { AamvaFields, buildAamvaString, defaultAamvaFields, STATE_IIN } from '@/constants/aamva';
+import { AamvaFields, buildAamvaString, defaultAamvaFields, STATE_IIN, STATE_JURISDICTION_DATA } from '@/constants/aamva';
 
 const STORAGE_KEY = '@aamva_fields_v1';
 
@@ -35,9 +35,14 @@ export function BarcodeProvider({ children }: { children: React.ReactNode }) {
     setFields((prev) => {
       const next = { ...prev, [key]: value };
 
-      // Auto-populate IIN when state changes
-      if (key === 'state' && typeof value === 'string' && STATE_IIN[value.toUpperCase()]) {
-        next.iin = STATE_IIN[value.toUpperCase()];
+      // Auto-populate IIN + jurisdiction data when state changes
+      if (key === 'state' && typeof value === 'string') {
+        const s = value.toUpperCase();
+        if (STATE_IIN[s]) next.iin = STATE_IIN[s];
+        // Only auto-fill jurisdiction if the user hasn't customised it yet
+        if (prev.jurisdictionData === '' || STATE_JURISDICTION_DATA[prev.state?.toUpperCase() ?? ''] === prev.jurisdictionData) {
+          next.jurisdictionData = STATE_JURISDICTION_DATA[s] ?? '';
+        }
       }
 
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
