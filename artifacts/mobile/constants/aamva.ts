@@ -27,6 +27,9 @@
  */
 
 export interface AamvaFields {
+  // Barcode version
+  aamvaVersion: '09' | '10' | '11';
+
   // Personal
   lastName: string;
   firstName: string;
@@ -69,6 +72,7 @@ export interface AamvaFields {
 }
 
 export const defaultAamvaFields: AamvaFields = {
+  aamvaVersion: '09',
   lastName: '',
   firstName: '',
   middleName: '',
@@ -204,9 +208,8 @@ export function buildAamvaString(fields: AamvaFields): string {
   //   '@\n\x1e\r' (4) + 'ANSI ' (5) + IIN (6) + '10' (2) + '00' (2) + NN (2)
   //
   const numSubfiles = hasJurisdiction ? '02' : '01';
-  // Version 09 — widely deployed and matches real-world issued cards.
-  // v10 is not yet universally supported by forensic scanners.
-  const headerPrefix = '@\n\x1e\rANSI ' + iin + '0900' + numSubfiles;
+  const ver = (fields.aamvaVersion ?? '09').slice(0, 2); // '09', '10', or '11'
+  const headerPrefix = '@\n\x1e\rANSI ' + iin + ver + '00' + numSubfiles;
 
   // Number of designators × 10 bytes each
   const designatorBytes = hasJurisdiction ? 20 : 10;

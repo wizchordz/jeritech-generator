@@ -3,12 +3,13 @@ import OpenAI from "openai";
 
 const router = Router();
 
-// Prefer a directly-supplied key; fall back to the Replit-managed integration
+// Use the user-supplied key only if it looks like a real OpenAI key (starts with "sk-").
+// Otherwise fall back to the Replit-managed integration key.
+const userKey = process.env.OPENAI_API_KEY ?? "";
+const useUserKey = userKey.startsWith("sk-");
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY ?? process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_API_KEY
-    ? undefined                                          // use default api.openai.com
-    : process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey: useUserKey ? userKey : process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  baseURL: useUserKey ? undefined : process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
 const EXTRACT_PROMPT = `You are an expert at reading US driver's licenses and state ID cards.

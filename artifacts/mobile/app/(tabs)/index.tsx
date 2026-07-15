@@ -194,6 +194,34 @@ export default function FormScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* ── AAMVA VERSION ────────────────────────── */}
+        <View style={[styles.versionRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.versionLabel, { color: colors.mutedForeground }]}>AAMVA VERSION</Text>
+          <View style={styles.versionChips}>
+            {(['09', '10', '11'] as const).map((v) => {
+              const active = fields.aamvaVersion === v;
+              return (
+                <TouchableOpacity
+                  key={v}
+                  onPress={() => { setField('aamvaVersion', v); Haptics.selectionAsync(); }}
+                  style={[
+                    styles.versionChip,
+                    {
+                      backgroundColor: active ? colors.primary : colors.secondary,
+                      borderColor: active ? colors.primary : colors.border,
+                    },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.versionChipText, { color: active ? colors.primaryForeground : colors.foreground }]}>
+                    v{v}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         {/* ── SCAN LICENCE ─────────────────────────── */}
         <TouchableOpacity
           style={[styles.scanBtn, { backgroundColor: colors.card, borderColor: colors.primary }]}
@@ -593,6 +621,37 @@ const styles = StyleSheet.create({
   },
   resetBtn: {
     padding: 8,
+  },
+  versionRow: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  versionLabel: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    letterSpacing: 0.5,
+  },
+  versionChips: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  versionChip: {
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+  versionChipText: {
+    fontSize: 13,
+    fontFamily: 'Inter_600SemiBold',
   },
   scanBtn: {
     marginHorizontal: 16,
