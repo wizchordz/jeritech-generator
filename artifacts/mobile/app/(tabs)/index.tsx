@@ -194,31 +194,11 @@ export default function FormScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ── AAMVA VERSION ────────────────────────── */}
+        {/* ── AAMVA VERSION badge (informational only) ─── */}
         <View style={[styles.versionRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.versionLabel, { color: colors.mutedForeground }]}>AAMVA VERSION</Text>
-          <View style={styles.versionChips}>
-            {(['09', '10', '11'] as const).map((v) => {
-              const active = fields.aamvaVersion === v;
-              return (
-                <TouchableOpacity
-                  key={v}
-                  onPress={() => { setField('aamvaVersion', v); Haptics.selectionAsync(); }}
-                  style={[
-                    styles.versionChip,
-                    {
-                      backgroundColor: active ? colors.primary : colors.secondary,
-                      borderColor: active ? colors.primary : colors.border,
-                    },
-                  ]}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.versionChipText, { color: active ? colors.primaryForeground : colors.foreground }]}>
-                    v{v}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+          <View style={[styles.versionChip, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+            <Text style={[styles.versionChipText, { color: colors.primaryForeground }]}>v09</Text>
           </View>
         </View>
 

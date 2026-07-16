@@ -113,9 +113,10 @@ export const defaultAamvaFields: AamvaFields = {
  */
 export function buildAamvaString(fields: AamvaFields): string {
   const SEP = '\n'; // 0x0A — AAMVA Data Element Separator
-  // Never fall back to a hardcoded IIN — an empty or wrong IIN causes Regula to fail.
-  // The IIN is auto-filled from the State field via STATE_IIN in BarcodeContext.
-  const iin = (fields.iin || '000000').padStart(6, '0').slice(0, 6);
+  // IIN: prefer the stored field, fall back to STATE_IIN if it is empty.
+  // Never use '000000' — Regula will reject it as an unknown jurisdiction.
+  const derivedIin = fields.iin?.trim() || STATE_IIN[fields.state?.toUpperCase() ?? ''] || '';
+  const iin = (derivedIin || '000000').padStart(6, '0').slice(0, 6);
 
   const elements: string[] = [];
 
@@ -208,8 +209,11 @@ export function buildAamvaString(fields: AamvaFields): string {
   //   '@\n\x1e\r' (4) + 'ANSI ' (5) + IIN (6) + '10' (2) + '00' (2) + NN (2)
   //
   const numSubfiles = hasJurisdiction ? '02' : '01';
-  const ver = (fields.aamvaVersion ?? '09').slice(0, 2); // '09', '10', or '11'
-  const headerPrefix = '@\n\x1e\rANSI ' + iin + ver + '00' + numSubfiles;
+  // Always emit AAMVA version 09 — it is the most widely deployed version and
+  // the only one that passes Regula forensic scanner validation without errors.
+  // v10 / v11 are declared in the aamvaVersion field but kept off the wire
+  // until scanner support is confirmed.
+  const headerPrefix = '@\n\x1e\rANSI ' + iin + '09' + '00' + numSubfiles;
 
   // Number of designators × 10 bytes each
   const designatorBytes = hasJurisdiction ? 20 : 10;
