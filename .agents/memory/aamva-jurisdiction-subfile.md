@@ -1,19 +1,19 @@
 ---
 name: AAMVA jurisdiction subfile — Regula compatibility
-description: Why auto-populated jurisdiction subfiles (ZC, ZT, etc.) cause "UNKNOWN" in Regula
+description: Whether jurisdiction subfiles (ZT, ZC, etc.) should be emitted
 ---
 
 ## Rule
-Do NOT auto-populate `jurisdictionData`. Leave it empty by default. Do NOT emit a jurisdiction subfile unless the user explicitly provides complete, verified data.
+DO auto-populate `jurisdictionData` from `STATE_JURISDICTION_DATA` when state changes. DO emit the jurisdiction subfile. Do NOT disable it.
 
-**Why:** A jurisdiction subfile with only one element (e.g., `ZC\nZCAN\n`) is rejected by Regula's strict parser. When Regula cannot parse the jurisdiction subfile, it marks the **entire document** as UNKNOWN — not just the jurisdiction check. This wipes all other scan results too.
+**Why:** The original TX working barcode included `ZTZTAN` and Regula verified it fully (showed as recognised document with only IIN field flagged). Removing the jurisdiction subfile did NOT fix anything — the UNKNOWN problem was caused by the wrong IIN (636014 instead of 636033 for CA), not by the jurisdiction subfile itself.
 
 ## How to apply
-- `defaultAamvaFields.jurisdictionData = ''`
-- BarcodeContext `setField` must NOT auto-fill jurisdictionData when state changes
-- BarcodeContext load from AsyncStorage must force-clear `jurisdictionData = ''` (override any stored value)
-- The `buildAamvaString` skips the ZC/ZT subfile if `jurisdictionData.trim()` is empty — this is correct and safe
+- `setField('state', ...)` should auto-set both `iin` (from STATE_IIN) and `jurisdictionData` (from STATE_JURISDICTION_DATA)
+- Do NOT force-clear jurisdictionData on AsyncStorage load
+- `buildAamvaString` skips the ZC/ZT subfile only if `jurisdictionData.trim()` is empty — correct
 
-## Evidence
-Barcode with `ZC\nZCAN\n` appended → Regula: UNKNOWN, all ⊖
-Same barcode without jurisdiction subfile → Regula recognises document type
+## Confirmed working format (TX)
+- Subfile type: `ZT` (from JURISDICTION_SUBFILE_TYPE['TX'])
+- Subfile data: `ZTAN` (from STATE_JURISDICTION_DATA['TX'])
+- Produces: `ZT\nZTAN\n` appended after the DL subfile

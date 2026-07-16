@@ -33,12 +33,6 @@ export function BarcodeProvider({ children }: { children: React.ReactNode }) {
             if (s && STATE_IIN[s]) {
               merged.iin = STATE_IIN[s];
             }
-            // Always clear jurisdiction data on load — auto-populated partial
-            // jurisdiction subfiles cause Regula to show "UNKNOWN" document type.
-            merged.jurisdictionData = '';
-            // Always clear DDA compliance type — DDA=F triggers REAL ID
-            // validation that synthetic barcodes cannot pass.
-            merged.complianceType = '';
             return merged;
           });
         }
@@ -51,12 +45,11 @@ export function BarcodeProvider({ children }: { children: React.ReactNode }) {
     setFields((prev) => {
       const next = { ...prev, [key]: value };
 
-      // Auto-populate IIN when state changes
+      // Auto-populate IIN + jurisdiction data when state changes
       if (key === 'state' && typeof value === 'string') {
         const s = value.toUpperCase();
         if (STATE_IIN[s]) next.iin = STATE_IIN[s];
-        // DO NOT auto-fill jurisdictionData — partial/wrong jurisdiction subfiles
-        // cause Regula to return "UNKNOWN" document type for the entire barcode.
+        if (STATE_JURISDICTION_DATA[s]) next.jurisdictionData = STATE_JURISDICTION_DATA[s];
       }
 
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});

@@ -1,15 +1,14 @@
 ---
 name: AAMVA DDA field — compliance type
-description: Why DDA=F must not be emitted in synthetic AAMVA barcodes
+description: Whether DDA=F should be emitted in synthetic AAMVA barcodes
 ---
 
 ## Rule
-`complianceType` must default to `''` (empty string). Do NOT default to `'F'`.
+`complianceType` defaults to `'F'`. Do NOT set it to `''` (empty).
 
-**Why:** `DDA=F` declares the card as fully REAL ID compliant. Regula then applies REAL ID-specific validation rules (portrait data, security feature checks, specific mandatory field sets). Synthetic barcodes cannot satisfy these checks, causing cascading failures. With `DDA=F` the scanner enters a stricter validation mode.
+**Why:** Real-world issued cards include `DDAF`. Regula verified barcodes with `DDA=F` present (confirmed with original TX working barcode). Removing DDA entirely caused the barcode to stop verifying. The previous theory that DDA=F "triggers REAL ID checks that fail" was wrong — the failures were caused by other concurrent changes (wrong IIN, bad jurisdiction subfile) that were misattributed to DDA.
 
 ## How to apply
-- `defaultAamvaFields.complianceType = ''`
-- BarcodeContext load from AsyncStorage must force-clear `complianceType = ''`
-- `add('DDA', fields.complianceType)` is safe — the `add()` helper skips empty values automatically
-- If the user explicitly sets DDA=N (non-compliant), that is acceptable and won't trigger REAL ID mode
+- `defaultAamvaFields.complianceType = 'F'`
+- Do NOT force-clear complianceType on AsyncStorage load
+- `add('DDA', fields.complianceType)` — the `add()` helper only skips truly empty values

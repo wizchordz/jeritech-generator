@@ -94,7 +94,7 @@ export const defaultAamvaFields: AamvaFields = {
   expiryDate: '',
   iin: '',
   inventoryControlNumber: '',
-  complianceType: '', // leave empty — DDA=F triggers REAL ID validation Regula cannot pass
+  complianceType: 'F', // DDA=F — fully compliant; matches real issued cards
   cardRevisionDate: '',
   address: '',
   city: '',
