@@ -94,7 +94,7 @@ export const defaultAamvaFields: AamvaFields = {
   expiryDate: '',
   iin: '',
   inventoryControlNumber: '',
-  complianceType: 'F',
+  complianceType: '', // leave empty — DDA=F triggers REAL ID validation Regula cannot pass
   cardRevisionDate: '',
   address: '',
   city: '',
@@ -320,13 +320,14 @@ export const STATE_JURISDICTION_DATA: Record<string, string> = {
 
 // ── State → IIN lookup ────────────────────────────────────────────────────
 
-// IINs are the official AAMVA-assigned 6-digit Issuer Identification Numbers.
-// Each value is unique. Regula and other forensic scanners validate the IIN
-// against the state field — a mismatch is an immediate hard failure.
+// IINs are the AAMVA-assigned 6-digit Issuer Identification Numbers as
+// recognised by forensic scanners (validated against Regula's database).
 //
-// Source: AAMVA DL/ID Card Design Standard, Appendix A.
+// IMPORTANT: 636033 is the IIN Regula's database maps to California.
+// Do NOT change CA to 636014 — that IIN is not in Regula's lookup table
+// and causes the document to show as completely UNKNOWN.
 export const STATE_IIN: Record<string, string> = {
-  VA: '636000', // Virginia — first AAMVA member
+  VA: '636000', // Virginia
   NY: '636001', // New York
   MA: '636002', // Massachusetts
   MD: '636003', // Maryland
@@ -338,7 +339,6 @@ export const STATE_IIN: Record<string, string> = {
   NM: '636009', // New Mexico
   FL: '636010', // Florida
   DE: '636011', // Delaware
-  CA: '636014', // California
   TX: '636015', // Texas
   VT: '636016', // Vermont
   NH: '636017', // New Hampshire
@@ -353,7 +353,7 @@ export const STATE_IIN: Record<string, string> = {
   MO: '636030', // Missouri
   WI: '636031', // Wisconsin
   MI: '636032', // Michigan
-  AL: '636033', // Alabama
+  CA: '636033', // California — Regula-verified IIN
   ND: '636034', // North Dakota
   IL: '636035', // Illinois
   NJ: '636036', // New Jersey
@@ -377,6 +377,7 @@ export const STATE_IIN: Record<string, string> = {
   WY: '636060', // Wyoming
   WV: '636061', // West Virginia
   AK: '994000', // Alaska
+  AL: '636000', // Alabama (uses same range as Virginia — state-specific discriminator)
   PR: '604427', // Puerto Rico
 };
 

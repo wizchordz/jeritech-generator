@@ -1,0 +1,3 @@
+- [AAMVA IIN / Regula scanning](aamva-iin-regula.md) — CA IIN must be 636033; 636014 returns UNKNOWN in Regula
+- [Jurisdiction subfile causes UNKNOWN](aamva-jurisdiction-subfile.md) — auto-populated ZC subfiles break Regula document recognition entirely
+- [DDA=F breaks REAL ID validation](aamva-dda-field.md) — complianceType must default empty; DDA=F triggers Regula REAL ID checks that always fail
