@@ -316,18 +316,64 @@ export const STATE_JURISDICTION_DATA: Record<string, string> = {
 
 // ── State → IIN lookup ────────────────────────────────────────────────────
 
+// IINs are the official AAMVA-assigned 6-digit Issuer Identification Numbers.
+// Each value is unique. Regula and other forensic scanners validate the IIN
+// against the state field — a mismatch is an immediate hard failure.
+//
+// Source: AAMVA DL/ID Card Design Standard, Appendix A.
 export const STATE_IIN: Record<string, string> = {
-  AL: '636000', AK: '994000', AZ: '636026', AR: '636021', CA: '636033',
-  CO: '636020', CT: '636006', DE: '636011', FL: '636010', GA: '636055',
-  HI: '636047', ID: '636050', IL: '636035', IN: '636037', IA: '636018',
-  KS: '636022', KY: '636046', LA: '636007', ME: '636041', MD: '636003',
-  MA: '636002', MI: '636032', MN: '636038', MS: '636051', MO: '636030',
-  MT: '636008', NE: '636054', NV: '636049', NH: '636017', NJ: '636036',
-  NM: '636009', NY: '636001', NC: '636004', ND: '636034', OH: '636023',
-  OK: '636058', OR: '636029', PA: '636025', RI: '636052', SC: '636005',
-  SD: '636042', TN: '636053', TX: '636015', UT: '636040', VT: '636016',
-  VA: '636000', WA: '636045', WV: '636061', WI: '636031', WY: '636060',
-  DC: '636043', PR: '636052',
+  VA: '636000', // Virginia — first AAMVA member
+  NY: '636001', // New York
+  MA: '636002', // Massachusetts
+  MD: '636003', // Maryland
+  NC: '636004', // North Carolina
+  SC: '636005', // South Carolina
+  CT: '636006', // Connecticut
+  LA: '636007', // Louisiana
+  MT: '636008', // Montana
+  NM: '636009', // New Mexico
+  FL: '636010', // Florida
+  DE: '636011', // Delaware
+  CA: '636014', // California
+  TX: '636015', // Texas
+  VT: '636016', // Vermont
+  NH: '636017', // New Hampshire
+  IA: '636018', // Iowa
+  CO: '636020', // Colorado
+  AR: '636021', // Arkansas
+  KS: '636022', // Kansas
+  OH: '636023', // Ohio
+  PA: '636025', // Pennsylvania
+  AZ: '636026', // Arizona
+  OR: '636029', // Oregon
+  MO: '636030', // Missouri
+  WI: '636031', // Wisconsin
+  MI: '636032', // Michigan
+  AL: '636033', // Alabama
+  ND: '636034', // North Dakota
+  IL: '636035', // Illinois
+  NJ: '636036', // New Jersey
+  IN: '636037', // Indiana
+  MN: '636038', // Minnesota
+  UT: '636040', // Utah
+  ME: '636041', // Maine
+  SD: '636042', // South Dakota
+  DC: '636043', // District of Columbia
+  WA: '636045', // Washington
+  KY: '636046', // Kentucky
+  HI: '636047', // Hawaii
+  NV: '636049', // Nevada
+  ID: '636050', // Idaho
+  MS: '636051', // Mississippi
+  RI: '636052', // Rhode Island
+  TN: '636053', // Tennessee
+  NE: '636054', // Nebraska
+  GA: '636055', // Georgia
+  OK: '636058', // Oklahoma
+  WY: '636060', // Wyoming
+  WV: '636061', // West Virginia
+  AK: '994000', // Alaska
+  PR: '604427', // Puerto Rico
 };
 
 // ── Lookup tables ─────────────────────────────────────────────────────────
