@@ -13,7 +13,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
-import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BarcodeRenderer from '@/components/BarcodeRenderer';
@@ -63,27 +62,19 @@ export default function BarcodeScreen() {
         setIsSaving(false);
         return;
       } else {
-        // Native: try saving to photo library first
-        const { status } = await MediaLibrary.requestPermissionsAsync();
-        if (status === 'granted') {
-          const asset = await MediaLibrary.createAssetAsync(fileUri);
-          // Place it in an "AAMVA Barcodes" album for easy discovery
-          const albums = await MediaLibrary.getAlbumsAsync();
-          const existing = albums.find((a) => a.title === 'AAMVA Barcodes');
-          if (existing) {
-            await MediaLibrary.addAssetsToAlbumAsync([asset], existing, false);
-          } else {
-            await MediaLibrary.createAlbumAsync('AAMVA Barcodes', asset, false);
-          }
-          Alert.alert('Saved!', 'Barcode PNG saved to your Photos in the "AAMVA Barcodes" album.');
+        // Native: open the system share sheet so the user can save to Photos,
+        // Files, or any other app. expo-sharing works in Expo Go without any
+        // extra AndroidManifest permissions (unlike expo-media-library which
+        // incorrectly requests AUDIO on Android 13+).
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: 'image/png',
+            dialogTitle: 'Save Barcode PNG',
+            UTI: 'public.png',
+          });
         } else {
-          // Fallback: share sheet so user can save manually
-          const canShare = await Sharing.isAvailableAsync();
-          if (canShare) {
-            await Sharing.shareAsync(fileUri, { mimeType: 'image/png', dialogTitle: 'Save Barcode PNG' });
-          } else {
-            Alert.alert('Permission denied', 'Allow photo library access in Settings to save the barcode.');
-          }
+          Alert.alert('Not supported', 'Sharing is not available on this device.');
         }
       }
     } catch (err) {
@@ -133,7 +124,7 @@ export default function BarcodeScreen() {
           <View>
             <Text style={[styles.headerTitle, { color: colors.foreground }]}>PDF417 Barcode</Text>
             <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-              AAMVA Driver License / ID Standard v8
+              AAMVA Driver License / ID Standard v{fields.aamvaVersion ?? '09'}
             </Text>
           </View>
           {/* Copy + Share buttons */}
