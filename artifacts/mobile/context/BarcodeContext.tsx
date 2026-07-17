@@ -18,23 +18,13 @@ export function BarcodeProvider({ children }: { children: React.ReactNode }) {
   const [fields, setFields] = useState<AamvaFields>(defaultAamvaFields);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load saved data on mount, then auto-correct IIN if it's stale
+  // Load saved data on mount
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((raw) => {
         if (raw) {
           const saved = JSON.parse(raw) as Partial<AamvaFields>;
-          setFields((prev) => {
-            const merged = { ...prev, ...saved };
-            // Auto-correct IIN whenever state is set — ensures that an
-            // old stored IIN (from before an IIN table update) is always
-            // replaced with the current correct value.
-            const s = merged.state?.toUpperCase() ?? '';
-            if (s && STATE_IIN[s]) {
-              merged.iin = STATE_IIN[s];
-            }
-            return merged;
-          });
+          setFields((prev) => ({ ...prev, ...saved }));
         }
       })
       .catch(() => {})
@@ -49,7 +39,10 @@ export function BarcodeProvider({ children }: { children: React.ReactNode }) {
       if (key === 'state' && typeof value === 'string') {
         const s = value.toUpperCase();
         if (STATE_IIN[s]) next.iin = STATE_IIN[s];
-        if (STATE_JURISDICTION_DATA[s]) next.jurisdictionData = STATE_JURISDICTION_DATA[s];
+        // Only auto-fill jurisdiction if the user hasn't customised it yet
+        if (prev.jurisdictionData === '' || STATE_JURISDICTION_DATA[prev.state?.toUpperCase() ?? ''] === prev.jurisdictionData) {
+          next.jurisdictionData = STATE_JURISDICTION_DATA[s] ?? '';
+        }
       }
 
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});

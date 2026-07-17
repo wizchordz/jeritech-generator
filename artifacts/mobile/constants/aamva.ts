@@ -94,7 +94,7 @@ export const defaultAamvaFields: AamvaFields = {
   expiryDate: '',
   iin: '',
   inventoryControlNumber: '',
-  complianceType: 'F', // DDA=F — fully compliant; matches real issued cards
+  complianceType: 'F',
   cardRevisionDate: '',
   address: '',
   city: '',
@@ -113,10 +113,9 @@ export const defaultAamvaFields: AamvaFields = {
  */
 export function buildAamvaString(fields: AamvaFields): string {
   const SEP = '\n'; // 0x0A — AAMVA Data Element Separator
-  // IIN: prefer the stored field, fall back to STATE_IIN if it is empty.
-  // Never use '000000' — Regula will reject it as an unknown jurisdiction.
-  const derivedIin = fields.iin?.trim() || STATE_IIN[fields.state?.toUpperCase() ?? ''] || '';
-  const iin = (derivedIin || '000000').padStart(6, '0').slice(0, 6);
+  // Never fall back to a hardcoded IIN — an empty or wrong IIN causes Regula to fail.
+  // The IIN is auto-filled from the State field via STATE_IIN in BarcodeContext.
+  const iin = (fields.iin || '000000').padStart(6, '0').slice(0, 6);
 
   const elements: string[] = [];
 
@@ -209,11 +208,8 @@ export function buildAamvaString(fields: AamvaFields): string {
   //   '@\n\x1e\r' (4) + 'ANSI ' (5) + IIN (6) + '10' (2) + '00' (2) + NN (2)
   //
   const numSubfiles = hasJurisdiction ? '02' : '01';
-  // Always emit AAMVA version 09 — it is the most widely deployed version and
-  // the only one that passes Regula forensic scanner validation without errors.
-  // v10 / v11 are declared in the aamvaVersion field but kept off the wire
-  // until scanner support is confirmed.
-  const headerPrefix = '@\n\x1e\rANSI ' + iin + '09' + '00' + numSubfiles;
+  const ver = (fields.aamvaVersion ?? '09').slice(0, 2); // '09', '10', or '11'
+  const headerPrefix = '@\n\x1e\rANSI ' + iin + ver + '00' + numSubfiles;
 
   // Number of designators × 10 bytes each
   const designatorBytes = hasJurisdiction ? 20 : 10;
@@ -320,65 +316,18 @@ export const STATE_JURISDICTION_DATA: Record<string, string> = {
 
 // ── State → IIN lookup ────────────────────────────────────────────────────
 
-// IINs are the AAMVA-assigned 6-digit Issuer Identification Numbers as
-// recognised by forensic scanners (validated against Regula's database).
-//
-// IMPORTANT: 636033 is the IIN Regula's database maps to California.
-// Do NOT change CA to 636014 — that IIN is not in Regula's lookup table
-// and causes the document to show as completely UNKNOWN.
 export const STATE_IIN: Record<string, string> = {
-  VA: '636000', // Virginia
-  NY: '636001', // New York
-  MA: '636002', // Massachusetts
-  MD: '636003', // Maryland
-  NC: '636004', // North Carolina
-  SC: '636005', // South Carolina
-  CT: '636006', // Connecticut
-  LA: '636007', // Louisiana
-  MT: '636008', // Montana
-  NM: '636009', // New Mexico
-  FL: '636010', // Florida
-  DE: '636011', // Delaware
-  TX: '636015', // Texas
-  VT: '636016', // Vermont
-  NH: '636017', // New Hampshire
-  IA: '636018', // Iowa
-  CO: '636020', // Colorado
-  AR: '636021', // Arkansas
-  KS: '636022', // Kansas
-  OH: '636023', // Ohio
-  PA: '636025', // Pennsylvania
-  AZ: '636026', // Arizona
-  OR: '636029', // Oregon
-  MO: '636030', // Missouri
-  WI: '636031', // Wisconsin
-  MI: '636032', // Michigan
-  CA: '636033', // California — Regula-verified IIN
-  ND: '636034', // North Dakota
-  IL: '636035', // Illinois
-  NJ: '636036', // New Jersey
-  IN: '636037', // Indiana
-  MN: '636038', // Minnesota
-  UT: '636040', // Utah
-  ME: '636041', // Maine
-  SD: '636042', // South Dakota
-  DC: '636043', // District of Columbia
-  WA: '636045', // Washington
-  KY: '636046', // Kentucky
-  HI: '636047', // Hawaii
-  NV: '636049', // Nevada
-  ID: '636050', // Idaho
-  MS: '636051', // Mississippi
-  RI: '636052', // Rhode Island
-  TN: '636053', // Tennessee
-  NE: '636054', // Nebraska
-  GA: '636055', // Georgia
-  OK: '636058', // Oklahoma
-  WY: '636060', // Wyoming
-  WV: '636061', // West Virginia
-  AK: '994000', // Alaska
-  AL: '636000', // Alabama (uses same range as Virginia — state-specific discriminator)
-  PR: '604427', // Puerto Rico
+  AL: '636000', AK: '994000', AZ: '636026', AR: '636021', CA: '636033',
+  CO: '636020', CT: '636006', DE: '636011', FL: '636010', GA: '636055',
+  HI: '636047', ID: '636050', IL: '636035', IN: '636037', IA: '636018',
+  KS: '636022', KY: '636046', LA: '636007', ME: '636041', MD: '636003',
+  MA: '636002', MI: '636032', MN: '636038', MS: '636051', MO: '636030',
+  MT: '636008', NE: '636054', NV: '636049', NH: '636017', NJ: '636036',
+  NM: '636009', NY: '636001', NC: '636004', ND: '636034', OH: '636023',
+  OK: '636058', OR: '636029', PA: '636025', RI: '636052', SC: '636005',
+  SD: '636042', TN: '636053', TX: '636015', UT: '636040', VT: '636016',
+  VA: '636000', WA: '636045', WV: '636061', WI: '636031', WY: '636060',
+  DC: '636043', PR: '636052',
 };
 
 // ── Lookup tables ─────────────────────────────────────────────────────────
