@@ -104,7 +104,23 @@ export const defaultAamvaFields: AamvaFields = {
 };
 
 /**
- * Build a fully AAMVA v10–compliant barcode string.
+ * Auto-generate a Document Discriminator (DCF) when the user leaves it blank.
+ * DCF is mandatory for REAL ID compliance — scanners like Regula flag it as
+ * "Unknown" when DCF is absent. The generated value is deterministic from
+ * the card's own data so it stays consistent across regenerations.
+ */
+function buildDCF(iin: string, fields: AamvaFields): string {
+  // Combine IIN + issueDate + documentNumber to form a unique discriminator.
+  // Pad/trim to a realistic 20-char value matching common DMV formats.
+  const raw = (iin + fields.issueDate + fields.documentNumber + fields.dob)
+    .replace(/\s/g, '')
+    .replace(/[^A-Z0-9]/gi, '');
+  // Pad with zeros if short; trim to 20 chars if long
+  return raw.padEnd(20, '0').slice(0, 20);
+}
+
+/**
+ * Build a fully AAMVA v9/v10/v11–compliant barcode string.
  *
  * Field order matches the AAMVA 2024 spec mandatory element sequence.
  * DDE/DDF/DDG truncation indicators are placed immediately after their
@@ -175,7 +191,15 @@ export function buildAamvaString(fields: AamvaFields): string {
   }
 
   add('DAQ', fields.documentNumber);           // License Number
-  add('DCF', fields.documentDiscriminator);    // Document Discriminator
+
+  // DCF — Document Discriminator: MANDATORY for REAL ID.
+  // If the user left it blank, auto-generate a plausible value from available
+  // fields so REAL ID compliance can be verified by forensic scanners.
+  const dcf = fields.documentDiscriminator.trim()
+    ? fields.documentDiscriminator.trim()
+    : buildDCF(iin, fields);
+  elements.push('DCF' + dcf);
+
   put('DCG', fields.country || 'USA');         // Country
 
   // ── Optional but standard fields ─────────────────────────────────────────
@@ -183,7 +207,9 @@ export function buildAamvaString(fields: AamvaFields): string {
   add('DAZ', fields.hairColor);                // Hair Color
   add('DCK', fields.inventoryControlNumber);   // Inventory Control Number
   add('DCL', fields.raceEthnicity);            // Race / Ethnicity
-  add('DDA', fields.complianceType);           // Compliance Type (F / N)
+  // DDA — Compliance Type: always written so forensic scanners can read it.
+  // 'F' = Fully REAL ID compliant, 'N' = Non-compliant.
+  put('DDA', fields.complianceType === 'N' ? 'N' : 'F');
   add('DDB', fields.cardRevisionDate);         // Card Revision Date
   add('DAW', fields.weight);                   // Weight (lbs)
 
