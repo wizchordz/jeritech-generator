@@ -5,30 +5,27 @@ workflows:
     environment:
       java: 17
       node: 20
+      vars:
+        # Prevent corepack from enforcing the builder machine's package manager
+        # (Codemagic builder has "packageManager":"yarn" in /Users/builder/package.json)
+        COREPACK_ENABLE_STRICT: "0"
     scripts:
       - name: Install pnpm
         script: |
-          # Codemagic builder machines have a system package.json with
-          # "packageManager": "yarn", causing corepack to block pnpm.
-          # Disable corepack enforcement before doing anything with pnpm.
           corepack disable 2>/dev/null || true
-          export COREPACK_ENABLE_STRICT=0
           npm install -g pnpm@9 --force
           pnpm --version
 
       - name: Install workspace dependencies
         script: |
-          export COREPACK_ENABLE_STRICT=0
-          # --no-frozen-lockfile: avoids lockfile mismatch errors in CI
-          # with pnpm workspaces that have local workspace: references
           pnpm install --no-frozen-lockfile
 
       - name: Expo Prebuild (generate native Android project)
         script: |
-          export COREPACK_ENABLE_STRICT=0
           cd artifacts/mobile
-          # npx expo is more reliable than pnpm exec expo in CI
-          npx expo prebuild --platform android --clean
+          # Use the locally installed expo binary (already in node_modules from pnpm install)
+          # Avoids npx downloading a different version and avoids corepack interference
+          ./node_modules/.bin/expo prebuild --platform android --clean
 
       - name: Generate release keystore
         script: |
@@ -46,7 +43,7 @@ workflows:
         script: |
           cd artifacts/mobile/android
           chmod +x ./gradlew
-          # Build arm64 only to keep APK small and fast
+          # arm64-v8a only: smaller APK, covers all modern Android phones
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file="$HOME/jeritech-release.keystore" \
             -Pandroid.injected.signing.store.password=jeritech2024 \
