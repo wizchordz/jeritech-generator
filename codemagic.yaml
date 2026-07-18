@@ -8,7 +8,7 @@ workflows:
     scripts:
       - name: Install pnpm
         script: |
-          npm install -g pnpm@9
+          command -v pnpm >/dev/null 2>&1 || npm install -g pnpm@9
 
       - name: Install workspace dependencies
         script: |
