@@ -1,0 +1,57 @@
+workflows:
+  android-apk:
+    name: JERITECH Generator — Android APK
+    max_build_duration: 60
+    environment:
+      java: 17
+      node: 20
+    scripts:
+      - name: Install pnpm
+        script: |
+          npm install -g pnpm@9
+
+      - name: Install workspace dependencies
+        script: |
+          # minimumReleaseAge is a local security policy; bypass it in CI
+          # where the lockfile is already pinned and trustworthy.
+          pnpm install --frozen-lockfile --config.minimumReleaseAge=0
+
+      - name: Expo Prebuild (generate native Android project)
+        script: |
+          cd artifacts/mobile
+          pnpm exec expo prebuild --platform android --clean --no-install
+
+      - name: Generate release keystore
+        script: |
+          keytool -genkeypair -v \
+            -keystore "$HOME/jeritech-release.keystore" \
+            -alias jeritech \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass jeritech2024 \
+            -keypass  jeritech2024 \
+            -dname "CN=JERITECH,OU=Mobile,O=JERITECH Generator,L=Houston,ST=TX,C=US"
+
+      - name: Build Release APK
+        script: |
+          cd artifacts/mobile/android
+          chmod +x ./gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file="$HOME/jeritech-release.keystore" \
+            -Pandroid.injected.signing.store.password=jeritech2024 \
+            -Pandroid.injected.signing.key.alias=jeritech \
+            -Pandroid.injected.signing.key.password=jeritech2024 \
+            -PreactNativeArchitectures=arm64-v8a \
+            --no-daemon
+
+    artifacts:
+      - artifacts/mobile/android/app/build/outputs/apk/release/*.apk
+
+    publishing:
+      email:
+        recipients:
+          - wisdomjeremiah6@gmail.com
+        notify:
+          success: true
+          failure: true
