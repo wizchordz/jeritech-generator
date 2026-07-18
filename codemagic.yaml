@@ -8,19 +8,24 @@ workflows:
     scripts:
       - name: Install pnpm
         script: |
-          command -v pnpm >/dev/null 2>&1 \
-            && echo "pnpm already available: $(pnpm --version)" \
-            || npm install -g pnpm@9
+          # Codemagic builder machines have a system package.json with
+          # "packageManager": "yarn", causing corepack to block pnpm.
+          # Disable corepack enforcement before doing anything with pnpm.
+          corepack disable 2>/dev/null || true
+          export COREPACK_ENABLE_STRICT=0
+          npm install -g pnpm@9 --force
           pnpm --version
 
       - name: Install workspace dependencies
         script: |
+          export COREPACK_ENABLE_STRICT=0
           # --no-frozen-lockfile: avoids lockfile mismatch errors in CI
           # with pnpm workspaces that have local workspace: references
           pnpm install --no-frozen-lockfile
 
       - name: Expo Prebuild (generate native Android project)
         script: |
+          export COREPACK_ENABLE_STRICT=0
           cd artifacts/mobile
           # npx expo is more reliable than pnpm exec expo in CI
           npx expo prebuild --platform android --clean
