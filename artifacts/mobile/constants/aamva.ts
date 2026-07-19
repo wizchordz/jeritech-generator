@@ -155,7 +155,8 @@ export function buildAamvaString(fields: AamvaFields): string {
   add('DAC', fields.firstName);                // First Name
   put('DDF', 'N');                              // First Name Truncation (right after DAC)
   add('DAD', fields.middleName);               // Middle Name
-  put('DDG', 'N');                              // Middle Name Truncation (right after DAD)
+  // DDG: 'N' = not truncated (only valid when a middle name exists), 'U' = unknown/none
+  put('DDG', fields.middleName.trim() ? 'N' : 'U'); // Middle Name Truncation
   add('DBD', fields.issueDate);                // Issue Date
   add('DBB', fields.dob);                      // Date of Birth
   put('DBC', fields.sex || '1');               // Sex
