@@ -50,7 +50,8 @@ workflows:
             -Pandroid.injected.signing.key.alias=jeritech \
             -Pandroid.injected.signing.key.password=jeritech2024 \
             -PreactNativeArchitectures=arm64-v8a \
-            --no-daemon
+            --no-daemon \
+            --stacktrace 2>&1 | tail -200
 
     artifacts:
       - artifacts/mobile/android/app/build/outputs/apk/release/*.apk
