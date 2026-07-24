@@ -68,7 +68,7 @@ router.post("/ocr/scan-license", async (req, res) => {
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-5",
       max_completion_tokens: 1024,
       messages: [
         {
