@@ -48,13 +48,14 @@ export default function BarcodeRenderer({
           bcid: 'pdf417',
           text: aamvaString,
           scale: 3,
-          columns: 10,
-          eclevel: 5,
           height: 8,
           includetext: false,
           paddingwidth: 10,
           paddingheight: 6,
-        });
+          // columns + eclevel are valid bwip-js options not yet reflected in the TS types
+          columns: 10,
+          eclevel: 5,
+        } as Parameters<typeof bwipjs.toCanvas>[1]);
 
         const uri = canvas.toDataURL('image/png');
         const base64 = uri.replace(/^data:image\/png;base64,/, '');
